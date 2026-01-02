@@ -1,0 +1,44 @@
+{
+  "name": "ghostsearch-app",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "test:unit": "vitest",
+    "lint": "eslint . && nuxi typecheck",
+    "lint:fix": "prettier --write --list-different . && eslint . --fix && nuxi typecheck --fix",
+    "format:check": "prettier --check .",
+    "format": "prettier --write --list-different ."
+  },
+  "dependencies": {
+    "@nuxt/content": "3.10.0",
+    "@nuxt/eslint": "1.12.1",
+    "@nuxt/hints": "1.0.0-alpha.5",
+    "@nuxt/image": "2.0.0",
+    "@nuxt/test-utils": "3.21.0",
+    "@nuxt/ui": "4.3.0",
+    "@nuxtjs/supabase": "2.0.3",
+    "@ts-ghost/content-api": "^4.2.0",
+    "@ts-ghost/core-api": "^6.2.0",
+    "better-sqlite3": "^12.5.0",
+    "consola": "^3.4.2",
+    "drizzle-orm": "^0.45.1",
+    "eslint": "^9.0.0",
+    "nuxt": "^4.2.2",
+    "postgres": "^3.4.7",
+    "typescript": "^5.6.3",
+    "typesense": "^2.1.0",
+    "vue": "^3.5.26",
+    "vue-router": "^4.6.4",
+    "zod": "^4.3.4"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.8",
+    "tsx": "^4.21.0",
+    "prettier": "^3.7.4"
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "name": "@magicpages/ghost-typesense-search-ui",
+  "version": "1.11.2",
+  "description": "A vanilla JavaScript search UI for Ghost + Typesense integration",
+  "type": "module",
+  "main": "dist/search.min.js",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "rollup -c",
+    "dev": "rollup -c -w",
+    "test": "exit 0",
+    "lint": "eslint src/**/*.js",
+    "format": "prettier --write src/**/*.{js,css}",
+    "clean": "rimraf dist"
+  },
+  "keywords": [
+    "ghost",
+    "typesense",
+    "search",
+    "ui"
+  ],
+  "author": "MagicPages",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/magicpages/ghost-typesense.git",
+    "directory": "packages/search-ui"
+  },
+  "dependencies": {
+    "typesense": "^1.7.2"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^25.0.7",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-replace": "^5.0.5",
+    "@rollup/plugin-terser": "^0.4.4",
+    "cssnano": "^6.0.3",
+    "eslint": "^8.56.0",
+    "postcss": "^8.4.35",
+    "prettier": "^3.2.5",
+    "rimraf": "^5.0.5",
+    "rollup": "^4.12.0",
+    "rollup-plugin-postcss": "^4.0.2",
+    "rollup-plugin-visualizer": "^5.14.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
