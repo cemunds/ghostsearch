@@ -59,7 +59,7 @@ const typesenseClient = new Typesense.Client({
     {
       host: process.env.TYPESENSE_HOST!,
       port: 8108,
-      protocol: "http",
+      protocol: process.env.MODE === "development" ? "http" : "https",
     },
   ],
   apiKey: process.env.TYPESENSE_ADMIN_KEY!,
@@ -158,7 +158,7 @@ export const collectionService = {
       syncError,
     );
   },
-  indexDocuments: async (collectionId: string, documents: Post[]) => {},
+  indexDocuments: async (collectionId: string, documents: Post[]) => { },
   transformPost: (post: GhostPost): Post => {
     console.log("Transforming post:", post.id, post.title);
 
