@@ -15,6 +15,7 @@
     "format": "prettier --write --list-different ."
   },
   "dependencies": {
+    "@iconify-json/lucide": "^1.2.82",
     "@iconify-json/simple-icons": "^1.2.64",
     "@nuxt/content": "3.10.0",
     "@nuxt/eslint": "1.12.1",

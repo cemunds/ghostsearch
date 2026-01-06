@@ -5,9 +5,9 @@ import { db } from "~~/server/db";
 import { userService } from "~~/server/services/user";
 
 export const CreateUserProfileDTO = z.object({
+  name: z.string().min(1, "Name is required"),
   email: z.email(),
   password: z.string().min(8),
-  fullName: z.string(),
 });
 
 export type CreateUserProfileDTO = z.infer<typeof CreateUserProfileDTO>;
@@ -22,7 +22,23 @@ export default defineEventHandler(async (event) => {
   }
 
   const client = await serverSupabaseClient(event);
-  const supabaseUser = await client.auth.signUp(user.data);
+  const supabaseUser = await client.auth.signUp({
+    email: user.data.email,
+    password: user.data.password,
+    options: {
+      data: {
+        full_name: user.data.name,
+      },
+    },
+  });
+
+  if (supabaseUser.error) {
+    consola.log(supabaseUser.error);
+    throw createError({
+      statusCode: 400,
+      statusMessage: supabaseUser.error.message,
+    });
+  }
 
   if (!supabaseUser.data.user) {
     throw createError({
@@ -34,7 +50,7 @@ export default defineEventHandler(async (event) => {
   const userId = supabaseUser.data.user.id;
 
   return await userService.create(db, {
-    ...user.data,
     userId,
+    fullName: user.data.name,
   });
 });

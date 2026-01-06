@@ -13,6 +13,7 @@ useSeoMeta({
 
 const supabase = useSupabaseClient();
 const toast = useToast();
+const router = useRouter();
 
 const fields = [
   {
@@ -39,15 +40,33 @@ const providers = [
   {
     label: "Google",
     icon: "i-simple-icons-google",
-    onClick: () => {
-      toast.add({ title: "Google", description: "Login with Google" });
+    onClick: async () => {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+      });
+      if (error) {
+        toast.add({
+          title: "Error",
+          description: error.message,
+          color: "error",
+        });
+      }
     },
   },
   {
     label: "GitHub",
     icon: "i-simple-icons-github",
-    onClick: () => {
-      toast.add({ title: "GitHub", description: "Login with GitHub" });
+    onClick: async () => {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "github",
+      });
+      if (error) {
+        toast.add({
+          title: "Error",
+          description: error.message,
+          color: "error",
+        });
+      }
     },
   },
 ];
@@ -60,25 +79,52 @@ const schema = z.object({
 type Schema = z.output<typeof schema>;
 
 async function onSubmit(payload: FormSubmitEvent<Schema>) {
-  const { error } = await supabase.auth.signInWithPassword({
-    email: payload.data.email,
-    password: payload.data.password,
-  });
+  try {
+    const { error } = await supabase.auth.signInWithPassword({
+      email: payload.data.email,
+      password: payload.data.password,
+    });
 
-  if (error) console.log(error);
+    if (error) {
+      toast.add({ title: "Error", description: error.message, color: "error" });
+      return;
+    }
+
+    toast.add({
+      title: "Success",
+      description: "Logged in successfully",
+      color: "success",
+    });
+    await router.push("/");
+  } catch (error) {
+    console.error("Login error:", error);
+    toast.add({
+      title: "Error",
+      description: "An unexpected error occurred",
+      color: "error",
+    });
+  }
 }
 </script>
 
 <template>
-  <UAuthForm :fields="fields" :schema="schema" :providers="providers" title="Welcome back" icon="i-lucide-lock"
-    @submit="onSubmit">
+  <UAuthForm
+    :fields="fields"
+    :schema="schema"
+    :providers="providers"
+    title="Welcome back"
+    icon="i-lucide-lock"
+    @submit="onSubmit"
+  >
     <template #description>
       Don't have an account?
       <ULink to="/signup" class="text-primary font-medium">Sign up</ULink>.
     </template>
 
     <template #password-hint>
-      <ULink to="/" class="text-primary font-medium" tabindex="-1">Forgot password?</ULink>
+      <ULink to="/" class="text-primary font-medium" tabindex="-1"
+        >Forgot password?</ULink
+      >
     </template>
 
     <template #footer>

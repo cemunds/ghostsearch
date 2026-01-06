@@ -3,16 +3,13 @@ export default defineNuxtConfig({
   compatibilityDate: "2025-07-15",
   devtools: { enabled: true },
   css: ["~/assets/css/main.css"],
-  routeRules: {
-    "/docs": { redirect: "/docs/getting-started", prerender: false },
-  },
-  nitro: {
-    prerender: {
-      routes: ["/"],
-      crawlLinks: true,
+  supabase: {
+    redirectOptions: {
+      login: "/login",
+      callback: "/confirm",
+      exclude: ["/signup"],
     },
   },
-  supabase: { redirect: false },
   modules: [
     "@nuxt/content",
     "@nuxt/eslint",

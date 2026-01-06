@@ -12,6 +12,7 @@ useSeoMeta({
 });
 
 const toast = useToast();
+const router = useRouter();
 
 const fields = [
   {
@@ -39,14 +40,14 @@ const providers = [
     label: "Google",
     icon: "i-simple-icons-google",
     onClick: () => {
-      toast.add({ title: "Google", description: "Login with Google" });
+      toast.add({ title: "Google", description: "Sign up with Google" });
     },
   },
   {
     label: "GitHub",
     icon: "i-simple-icons-github",
     onClick: () => {
-      toast.add({ title: "GitHub", description: "Login with GitHub" });
+      toast.add({ title: "GitHub", description: "Sign up with GitHub" });
     },
   },
 ];
@@ -65,15 +66,33 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
       method: "POST",
       body: payload.data,
     });
+
+    toast.add({
+      title: "Success",
+      description: "Account created successfully",
+      color: "success",
+    });
+    await router.push("/");
   } catch (error) {
-    console.log(error);
+    console.error("Signup error:", error);
+    toast.add({
+      title: "Error",
+      description: "Failed to create account",
+      color: "error",
+    });
   }
 }
 </script>
 
 <template>
-  <UAuthForm :fields="fields" :schema="schema" :providers="providers" title="Create an account"
-    :submit="{ label: 'Create account' }" @submit="onSubmit">
+  <UAuthForm
+    :fields="fields"
+    :schema="schema"
+    :providers="providers"
+    title="Create an account"
+    :submit="{ label: 'Create account' }"
+    @submit="onSubmit"
+  >
     <template #description>
       Already have an account?
       <ULink to="/login" class="text-primary font-medium">Login</ULink>.
