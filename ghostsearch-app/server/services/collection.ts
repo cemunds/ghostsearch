@@ -59,7 +59,7 @@ const typesenseClient = new Typesense.Client({
     {
       host: process.env.TYPESENSE_HOST!,
       port: 8108,
-      protocol: process.env.MODE === "development" ? "http" : "https",
+      protocol: process.env.VERCEL_ENV === "production" ? "https" : "http",
     },
   ],
   apiKey: process.env.TYPESENSE_ADMIN_KEY!,
