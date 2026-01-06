@@ -28,6 +28,7 @@ export default defineEventHandler(async (event) => {
     consola.log(collection.error);
     throw createError({ statusCode: 400, statusMessage: "Bad Request" });
   }
+  consola.log("Parsed collection request")
 
   // Validate Ghost CMS configuration if provided
   if (collection.data.ghostUrl && collection.data.ghostContentApiKey) {
@@ -37,6 +38,7 @@ export default defineEventHandler(async (event) => {
       // adminApiKey: collection.data.ghostAdminApiKey,
     });
 
+    consola.log("Validating Ghost Content API key")
     const isValid = await ghostService.validateContentApiKey();
     if (!isValid) {
       throw createError({
@@ -44,14 +46,17 @@ export default defineEventHandler(async (event) => {
         statusMessage: "Invalid Ghost Content API key",
       });
     }
+    consola.log("Validated Ghost Content API key")
   }
 
   try {
+    consola.log("Creating collection")
     const createdCollection = await collectionService.create(
       db,
       collection.data,
       user.sub,
     );
+    consola.log("Created collection")
 
     return createdCollection;
   } catch (error) {
