@@ -62,7 +62,7 @@ const typesenseClient = new Typesense.Client({
   nodes: [
     {
       host: process.env.TYPESENSE_HOST!,
-      port: 8108,
+      port: 443,
       protocol: "https",
     },
   ],
