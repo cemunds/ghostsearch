@@ -59,20 +59,21 @@ const schema = z.object({
 
 type Schema = z.output<typeof schema>;
 
-function onSubmit(payload: FormSubmitEvent<Schema>) {
-  console.log("Submitted", payload);
+async function onSubmit(payload: FormSubmitEvent<Schema>) {
+  try {
+    await $fetch("/api/v1/auth/signup", {
+      method: "POST",
+      body: payload.data,
+    });
+  } catch (error) {
+    console.log(error);
+  }
 }
 </script>
 
 <template>
-  <UAuthForm
-    :fields="fields"
-    :schema="schema"
-    :providers="providers"
-    title="Create an account"
-    :submit="{ label: 'Create account' }"
-    @submit="onSubmit"
-  >
+  <UAuthForm :fields="fields" :schema="schema" :providers="providers" title="Create an account"
+    :submit="{ label: 'Create account' }" @submit="onSubmit">
     <template #description>
       Already have an account?
       <ULink to="/login" class="text-primary font-medium">Login</ULink>.

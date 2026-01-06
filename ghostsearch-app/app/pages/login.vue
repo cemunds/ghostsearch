@@ -11,6 +11,7 @@ useSeoMeta({
   description: "Login to your account to continue",
 });
 
+const supabase = useSupabaseClient();
 const toast = useToast();
 
 const fields = [
@@ -58,29 +59,26 @@ const schema = z.object({
 
 type Schema = z.output<typeof schema>;
 
-function onSubmit(payload: FormSubmitEvent<Schema>) {
-  console.log("Submitted", payload);
+async function onSubmit(payload: FormSubmitEvent<Schema>) {
+  const { error } = await supabase.auth.signInWithPassword({
+    email: payload.data.email,
+    password: payload.data.password,
+  });
+
+  if (error) console.log(error);
 }
 </script>
 
 <template>
-  <UAuthForm
-    :fields="fields"
-    :schema="schema"
-    :providers="providers"
-    title="Welcome back"
-    icon="i-lucide-lock"
-    @submit="onSubmit"
-  >
+  <UAuthForm :fields="fields" :schema="schema" :providers="providers" title="Welcome back" icon="i-lucide-lock"
+    @submit="onSubmit">
     <template #description>
       Don't have an account?
       <ULink to="/signup" class="text-primary font-medium">Sign up</ULink>.
     </template>
 
     <template #password-hint>
-      <ULink to="/" class="text-primary font-medium" tabindex="-1"
-        >Forgot password?</ULink
-      >
+      <ULink to="/" class="text-primary font-medium" tabindex="-1">Forgot password?</ULink>
     </template>
 
     <template #footer>
