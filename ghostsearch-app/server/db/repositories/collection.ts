@@ -57,6 +57,38 @@ export const collectionRepository = {
 
     return userCollection.at(0) ?? null;
   },
+  getWithSecret: async (
+    db: Queryable,
+    secret: string,
+    collectionId: string,
+  ): Promise<TypesenseCollection | null> => {
+    const userCollection = await db
+      .select({
+        id: collection.id,
+        name: collection.name,
+        description: collection.description,
+        ghostUrl: collection.ghostUrl,
+        ghostContentApiKey: collection.ghostContentApiKey,
+        typesenseSearchKey: collection.typesenseSearchKey,
+        createdAt: collection.createdAt,
+        updatedAt: collection.updatedAt,
+        lastSyncAt: collection.lastSyncAt,
+        syncStatus: collection.syncStatus,
+        syncError: collection.syncError,
+        postCount: collection.postCount,
+        pageCount: collection.pageCount,
+      })
+      .from(collection)
+      .where(
+        and(
+          eq(collection.webhookSecret, secret),
+          eq(collection.id, collectionId),
+        ),
+      )
+      .limit(1);
+
+    return userCollection.at(0) ?? null;
+  },
   create: async (
     db: Queryable,
     userId: string,

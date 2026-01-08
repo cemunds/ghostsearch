@@ -1,4 +1,3 @@
-import { Post as GhostPost } from "@ts-ghost/content-api";
 import { CollectionCreateSchema } from "typesense/lib/Typesense/Collections";
 import { DB } from "../db";
 import { collectionRepository } from "../db/repositories/collection";
@@ -6,7 +5,7 @@ import Typesense from "typesense";
 import { z } from "zod";
 import consola from "consola";
 
-export interface Post {
+export interface Document {
   id: string;
   title: string;
   slug: string;
@@ -85,6 +84,9 @@ export const collectionService = {
   ): Promise<TypesenseCollection | null> => {
     return await collectionRepository.getById(db, userId, collectionId);
   },
+  getWithSecret: async (db: DB, secret: string, collectionId: string) => {
+    return await collectionRepository.getWithSecret(db, secret, collectionId);
+  },
   create: async (
     db: DB,
     payload: CreateTypesenseCollection,
@@ -159,104 +161,12 @@ export const collectionService = {
       syncError,
     );
   },
-  indexDocuments: async (collectionId: string, documents: Post[]) => { },
-  transformPost: (post: GhostPost): Post => {
-    console.log("Transforming post:", post.id, post.title);
-
-    // Ensure we have plaintext content
-    let plaintext = post.plaintext || "";
-
-    // Always try to enhance/improve plaintext extraction from HTML
-    // even if plaintext already exists
-    if (post.html) {
-      // Use a more comprehensive approach to extract text including from links and special formatting
-      // First remove script and style tags
-      let cleanHtml = post.html
-        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-        .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "");
-
-      // Extract text from anchor tags to preserve linked text
-      cleanHtml = cleanHtml.replace(/<a[^>]*>([^<]*)<\/a>/gi, " $1 ");
-
-      // Extract text from other formatting tags (strong, em, b, i, etc.)
-      cleanHtml = cleanHtml.replace(
-        /<(strong|b|em|i|mark|span)[^>]*>([^<]*)<\/(strong|b|em|i|mark|span)>/gi,
-        " $2 ",
-      );
-
-      // Remove all remaining HTML tags
-      cleanHtml = cleanHtml.replace(/<[^>]*>/g, " ");
-
-      // Handle common HTML entities
-      cleanHtml = cleanHtml
-        .replace(/&nbsp;/gi, " ")
-        .replace(/&amp;/gi, "&")
-        .replace(/&lt;/gi, "<")
-        .replace(/&gt;/gi, ">")
-        .replace(/&quot;/gi, '"')
-        .replace(/&#39;/gi, "'")
-        .replace(/&[a-z]+;/gi, " "); // Replace any remaining entities
-
-      // Normalize whitespace and trim
-      cleanHtml = cleanHtml.replace(/\s+/g, " ").trim();
-
-      // If we didn't have plaintext or if our extracted text is more comprehensive, use it
-      if (!plaintext || cleanHtml.length > plaintext.length) {
-        plaintext = cleanHtml;
-      }
-    }
-
-    const transformed: Post = {
-      id: post.id,
-      title: post.title,
-      slug: post.slug,
-      url: post.url, //|| `${this.config.ghost.url}/${post.slug}/`,
-      html: post.html || "",
-      plaintext: plaintext,
-      excerpt: post.excerpt || "",
-      published_at: new Date(post.published_at || Date.now()).getTime(),
-      updated_at: new Date(post.updated_at || Date.now()).getTime(),
-    };
-
-    if (post.feature_image) {
-      transformed.feature_image = post.feature_image;
-    }
-
-    const tags = post.tags;
-    if (tags && Array.isArray(tags) && tags.length > 0) {
-      // Use dot notation for nested tag fields
-      transformed["tags.name"] = tags.map((tag: { name: string }) => tag.name);
-      transformed["tags.slug"] = tags.map((tag: { slug: string }) => tag.slug);
-
-      // Add the standard tags field that Typesense expects as string[]
-      transformed.tags = tags.map((tag: { name: string }) => tag.name);
-    }
-
-    const authors = post.authors;
-    if (authors && Array.isArray(authors) && authors.length > 0) {
-      transformed.authors = authors.map(
-        (author: { name: string }) => author.name,
-      );
-    }
-
-    // Add any additional fields specified in the config
-    // Only add fields that haven't already been transformed to avoid overriding custom transformations
-    // this.config.collection.fields.forEach((field) => {
-    //   const value = post[field.name as keyof GhostPost];
-    //   if (!(field.name in transformed) && value !== undefined && value !== null) {
-    //     transformed[field.name] = value;
-    //   }
-    // });
-
-    console.log("Transformed document:", transformed);
-    return transformed;
-  },
-  indexDocumentsBatched: async (collectionId: string, documents: Post[]) => {
+  indexDocuments: async (collectionId: string, documents: Document[]) => {
     const batchSize = typesenseConfig.batchSize || 200;
     const maxConcurrentBatches = typesenseConfig.maxConcurrentBatches || 12;
 
     // Split documents into batches
-    const batches: Post[][] = [];
+    const batches: Document[][] = [];
     for (let i = 0; i < documents.length; i += batchSize) {
       batches.push(documents.slice(i, i + batchSize));
     }
@@ -269,7 +179,7 @@ export const collectionService = {
     let totalFailed = 0;
     const failedBatches: Array<{
       batchIndex: number;
-      documents: Post[];
+      documents: Document[];
       error: string;
     }> = [];
 
@@ -278,7 +188,7 @@ export const collectionService = {
       const batchGroup = batches.slice(i, i + maxConcurrentBatches);
       const batchPromises = batchGroup.map(async (batch, batchIndex) => {
         const actualBatchIndex = i + batchIndex;
-        return collectionService.processBatchWithRetry(
+        return processBatchWithRetry(
           collection,
           batch,
           actualBatchIndex,
@@ -325,10 +235,7 @@ export const collectionService = {
       console.log(
         `Retrying ${failedBatches.length} failed batches with smaller batch size...`,
       );
-      const retryResults = await collectionService.retryFailedBatches(
-        collection,
-        failedBatches,
-      );
+      const retryResults = await retryFailedBatches(collection, failedBatches);
       totalSucceeded += retryResults.succeeded;
       totalFailed =
         totalFailed - retryResults.retryAttempted + retryResults.failed;
@@ -344,169 +251,168 @@ export const collectionService = {
       );
     }
   },
-  processBatchWithRetry: async (
-    collection: any,
-    documents: Post[],
-    batchIndex: number,
-    totalBatches: number,
-  ): Promise<{ succeeded: number; failed: number; error?: string }> => {
-    const maxRetries = 3;
-    let lastError: string = "";
+  indexPost: async (collectionId: string, post: Document): Promise<void> => {
+    // const post = await ghostClient.posts
+    //   .read({
+    //     id: postId,
+    //   })
+    //   .include({ tags: true, authors: true })
+    //   .fetch();
 
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        console.log(
-          `Processing batch ${batchIndex + 1}/${totalBatches} (${documents.length} docs) - attempt ${attempt}`,
-        );
+    // if (!post.success) {
+    //   throw new Error(`Failed to fetch post ${post.id} from Ghost`);
+    // }
 
-        const result = await collection.documents().import(documents, {
-          action: "upsert",
-          batch_size: documents.length,
-          return_doc: false,
-          return_id: false,
-        });
-
-        // Parse bulk import result
-        const succeeded = result.filter((r: any) => r.success === true).length;
-        const failed = documents.length - succeeded;
-
-        if (failed > 0) {
-          console.log(
-            `Batch ${batchIndex + 1}: ${succeeded} succeeded, ${failed} failed`,
-          );
-        }
-
-        return { succeeded, failed };
-      } catch (error: any) {
-        lastError = error.message || error;
-
-        // Handle HTTP 503 (server overload) with exponential backoff
-        if (
-          error.httpStatus === 503 ||
-          lastError.includes("503") ||
-          lastError.includes("Not Ready")
-        ) {
-          const backoffDelay = Math.min(1000 * Math.pow(2, attempt), 10000); // Max 10s
-          console.log(
-            `Batch ${batchIndex + 1}: Server overload (503), retrying in ${backoffDelay}ms...`,
-          );
-          await sleep(backoffDelay);
-          continue;
-        }
-
-        // Handle timeout errors
-        if (
-          lastError.includes("timeout") ||
-          lastError.includes("ECONNABORTED")
-        ) {
-          const backoffDelay = Math.min(2000 * attempt, 8000); // Max 8s for timeouts
-          console.log(
-            `Batch ${batchIndex + 1}: Timeout error, retrying in ${backoffDelay}ms...`,
-          );
-          await sleep(backoffDelay);
-          continue;
-        }
-
-        // For other errors, retry with shorter delay
-        if (attempt < maxRetries) {
-          const backoffDelay = 1000 * attempt;
-          console.log(
-            `Batch ${batchIndex + 1}: Error (${lastError}), retrying in ${backoffDelay}ms...`,
-          );
-          await sleep(backoffDelay);
-          continue;
-        }
-      }
-    }
-
-    console.error(
-      `Batch ${batchIndex + 1} failed after ${maxRetries} attempts: ${lastError}`,
-    );
-    return { succeeded: 0, failed: documents.length, error: lastError };
-  },
-  retryFailedBatches: async (
-    collection: any,
-    failedBatches: Array<{
-      batchIndex: number;
-      documents: Post[];
-      error: string;
-    }>,
-  ): Promise<{ succeeded: number; failed: number; retryAttempted: number }> => {
-    let succeeded = 0;
-    let failed = 0;
-    let retryAttempted = 0;
-
-    for (const failedBatch of failedBatches) {
-      retryAttempted += failedBatch.documents.length;
-
-      // Retry with smaller batches (50 docs each)
-      const smallBatches: Post[][] = [];
-      for (let i = 0; i < failedBatch.documents.length; i += 50) {
-        smallBatches.push(failedBatch.documents.slice(i, i + 50));
-      }
-
-      for (const smallBatch of smallBatches) {
-        try {
-          const result = await collection.documents().import(smallBatch, {
-            action: "upsert",
-            batch_size: smallBatch.length,
-            return_doc: false,
-            return_id: false,
-          });
-
-          const batchSucceeded = result.filter(
-            (r: any) => r.success === true,
-          ).length;
-          succeeded += batchSucceeded;
-          failed += smallBatch.length - batchSucceeded;
-        } catch (error: any) {
-          console.error(`Small batch retry failed: ${error.message || error}`);
-          failed += smallBatch.length;
-        }
-
-        // Small delay between retry batches
-        await sleep(500);
-      }
-    }
-
-    return { succeeded, failed, retryAttempted };
-  },
-  indexPost: async (collectionId: string, postId: string): Promise<void> => {
-    const post = await ghostClient.posts
-      .read({
-        id: postId,
-      })
-      .include({ tags: true, authors: true })
-      .fetch();
-
-    if (!post.success) {
-      throw new Error(`Failed to fetch post ${postId} from Ghost`);
-    }
-
-    const document = collectionService.transformPost(post.data);
+    // const document = collectionService.transformPost(post.data);
     const collection = typesenseClient.collections(collectionId);
-    await collection.documents().upsert(document);
+    await collection.documents().upsert(post);
   },
   deletePost: async (collectionId: string, postId: string) => {
     const collection = typesenseClient.collections(collectionId);
     await collection.documents().delete({ filter_by: `id:${postId}` });
   },
-  clearCollection: async (collectionId: string) => {
-    const collection = typesenseClient.collections(collectionId);
-    await collection.delete();
+  // clearCollection: async (collectionId: string) => {
+  //   const collection = typesenseClient.collections(collectionId);
+  //   await collection.delete();
 
-    const schema = {
-      name: collectionId,
-      fields: this.config.collection.fields.map((field) => ({
-        name: field.name,
-        type: field.type,
-        facet: field.facet,
-        index: field.index,
-        optional: field.optional,
-        sort: field.sort,
-      })),
-    };
+  //   const schema = {
+  //     name: collectionId,
+  //     fields: this.config.collection.fields.map((field) => ({
+  //       name: field.name,
+  //       type: field.type,
+  //       facet: field.facet,
+  //       index: field.index,
+  //       optional: field.optional,
+  //       sort: field.sort,
+  //     })),
+  //   };
 
-    await typesenseClient.collections().create(schema);
-  },
+  //   await typesenseClient.collections().create(schema);
+  // },
 };
+
+async function processBatchWithRetry(
+  collection: any,
+  documents: Document[],
+  batchIndex: number,
+  totalBatches: number,
+): Promise<{ succeeded: number; failed: number; error?: string }> {
+  const maxRetries = 3;
+  let lastError: string = "";
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(
+        `Processing batch ${batchIndex + 1}/${totalBatches} (${documents.length} docs) - attempt ${attempt}`,
+      );
+
+      const result = await collection.documents().import(documents, {
+        action: "upsert",
+        batch_size: documents.length,
+        return_doc: false,
+        return_id: false,
+      });
+
+      // Parse bulk import result
+      const succeeded = result.filter((r: any) => r.success === true).length;
+      const failed = documents.length - succeeded;
+
+      if (failed > 0) {
+        console.log(
+          `Batch ${batchIndex + 1}: ${succeeded} succeeded, ${failed} failed`,
+        );
+      }
+
+      return { succeeded, failed };
+    } catch (error: any) {
+      lastError = error.message || error;
+
+      // Handle HTTP 503 (server overload) with exponential backoff
+      if (
+        error.httpStatus === 503 ||
+        lastError.includes("503") ||
+        lastError.includes("Not Ready")
+      ) {
+        const backoffDelay = Math.min(1000 * Math.pow(2, attempt), 10000); // Max 10s
+        console.log(
+          `Batch ${batchIndex + 1}: Server overload (503), retrying in ${backoffDelay}ms...`,
+        );
+        await sleep(backoffDelay);
+        continue;
+      }
+
+      // Handle timeout errors
+      if (lastError.includes("timeout") || lastError.includes("ECONNABORTED")) {
+        const backoffDelay = Math.min(2000 * attempt, 8000); // Max 8s for timeouts
+        console.log(
+          `Batch ${batchIndex + 1}: Timeout error, retrying in ${backoffDelay}ms...`,
+        );
+        await sleep(backoffDelay);
+        continue;
+      }
+
+      // For other errors, retry with shorter delay
+      if (attempt < maxRetries) {
+        const backoffDelay = 1000 * attempt;
+        console.log(
+          `Batch ${batchIndex + 1}: Error (${lastError}), retrying in ${backoffDelay}ms...`,
+        );
+        await sleep(backoffDelay);
+        continue;
+      }
+    }
+  }
+
+  console.error(
+    `Batch ${batchIndex + 1} failed after ${maxRetries} attempts: ${lastError}`,
+  );
+  return { succeeded: 0, failed: documents.length, error: lastError };
+}
+
+async function retryFailedBatches(
+  collection: any,
+  failedBatches: Array<{
+    batchIndex: number;
+    documents: Document[];
+    error: string;
+  }>,
+): Promise<{ succeeded: number; failed: number; retryAttempted: number }> {
+  let succeeded = 0;
+  let failed = 0;
+  let retryAttempted = 0;
+
+  for (const failedBatch of failedBatches) {
+    retryAttempted += failedBatch.documents.length;
+
+    // Retry with smaller batches (50 docs each)
+    const smallBatches: Document[][] = [];
+    for (let i = 0; i < failedBatch.documents.length; i += 50) {
+      smallBatches.push(failedBatch.documents.slice(i, i + 50));
+    }
+
+    for (const smallBatch of smallBatches) {
+      try {
+        const result = await collection.documents().import(smallBatch, {
+          action: "upsert",
+          batch_size: smallBatch.length,
+          return_doc: false,
+          return_id: false,
+        });
+
+        const batchSucceeded = result.filter(
+          (r: any) => r.success === true,
+        ).length;
+        succeeded += batchSucceeded;
+        failed += smallBatch.length - batchSucceeded;
+      } catch (error: any) {
+        console.error(`Small batch retry failed: ${error.message || error}`);
+        failed += smallBatch.length;
+      }
+
+      // Small delay between retry batches
+      await sleep(500);
+    }
+  }
+
+  return { succeeded, failed, retryAttempted };
+}

@@ -1,11 +1,12 @@
 import { TSGhostContentAPI } from "@ts-ghost/content-api";
 import consola from "consola";
 import { createError } from "h3";
-import { collectionService } from "./collection";
+import { collectionService, Document } from "./collection";
 import { db } from "../db";
 import { collectionRepository } from "../db/repositories/collection";
 import { syncHistory, collection } from "../db/schema";
 import { eq } from "drizzle-orm";
+import { Post } from "@ts-ghost/content-api";
 
 interface GhostServiceConfig {
   url: string;
@@ -134,6 +135,36 @@ export class GhostService {
     }
   }
 
+  async fetchPost(postId: string) {
+    const post = await this.contentClient.posts
+      .read({
+        id: postId,
+      })
+      .include({ tags: true, authors: true })
+      .fetch();
+
+    if (!post.success) {
+      throw new Error(`Failed to fetch post ${postId} from Ghost`);
+    }
+
+    return post.data;
+  }
+
+  async fetchPage(pageId: string) {
+    const page = await this.contentClient.pages
+      .read({
+        id: pageId,
+      })
+      .include({ tags: true, authors: true })
+      .fetch();
+
+    if (!page.success) {
+      throw new Error(`Failed to fetch page ${pageId} from Ghost`);
+    }
+
+    return page.data;
+  }
+
   /**
    * Sync all content from Ghost to Typesense
    */
@@ -157,31 +188,24 @@ export class GhostService {
       ]);
 
       // Transform and index posts
-      const postDocuments = posts.map((post: any) =>
-        collectionService.transformPost(post),
-      );
+      const postDocuments = posts.map((post: any) => transformPost(post));
 
       // Transform and index pages
       const pageDocuments = pages.map((page: any) => {
         const pageWithType = { ...page, type: "page" };
-        return collectionService.transformPost(pageWithType);
+        return transformPost(pageWithType);
       });
 
       // Index all documents
       const allDocuments = [...postDocuments, ...pageDocuments];
-      await collectionService.indexDocumentsBatched(collectionId, allDocuments);
+      await collectionService.indexDocuments(collectionId, allDocuments);
 
-      // Update collection stats using direct DB update
-      await db
-        .update(collection)
-        .set({
-          postCount: posts.length,
-          pageCount: pages.length,
-          lastSyncAt: new Date(),
-          syncStatus: "completed",
-          syncError: null,
-        })
-        .where(eq(collection.id, collectionId));
+      await collectionService.setSyncStatus(
+        db,
+        collectionId,
+        "completed",
+        null,
+      );
 
       // Complete sync record
       await db
@@ -200,14 +224,12 @@ export class GhostService {
     } catch (error: any) {
       consola.error("Content sync failed:", error.message);
 
-      // Update collection with error using direct DB update
-      await db
-        .update(collection)
-        .set({
-          syncStatus: "error",
-          syncError: error.message,
-        })
-        .where(eq(collection.id, collectionId));
+      await collectionService.setSyncStatus(
+        db,
+        collectionId,
+        "error",
+        error.message,
+      );
 
       throw new Error(`Content sync failed: ${error.message}`);
     }
@@ -278,8 +300,110 @@ export class GhostService {
   }
 }
 
-// Export singleton instance for backward compatibility
-export const ghostService = new GhostService({
-  url: "https://admin.bimflow.app",
-  contentApiKey: "270d63026ccd4bf0ee62fcf7d2",
-});
+type IndexedPostFields = Pick<
+  Post,
+  | "id"
+  | "title"
+  | "plaintext"
+  | "html"
+  | "slug"
+  | "url"
+  | "excerpt"
+  | "published_at"
+  | "updated_at"
+  | "feature_image"
+  | "tags"
+  | "authors"
+>;
+
+export function transformPost(post: IndexedPostFields): Document {
+  console.log("Transforming post:", post.id, post.title);
+
+  // Ensure we have plaintext content
+  let plaintext = post.plaintext || "";
+
+  // Always try to enhance/improve plaintext extraction from HTML
+  // even if plaintext already exists
+  if (post.html) {
+    // Use a more comprehensive approach to extract text including from links and special formatting
+    // First remove script and style tags
+    let cleanHtml = post.html
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+      .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "");
+
+    // Extract text from anchor tags to preserve linked text
+    cleanHtml = cleanHtml.replace(/<a[^>]*>([^<]*)<\/a>/gi, " $1 ");
+
+    // Extract text from other formatting tags (strong, em, b, i, etc.)
+    cleanHtml = cleanHtml.replace(
+      /<(strong|b|em|i|mark|span)[^>]*>([^<]*)<\/(strong|b|em|i|mark|span)>/gi,
+      " $2 ",
+    );
+
+    // Remove all remaining HTML tags
+    cleanHtml = cleanHtml.replace(/<[^>]*>/g, " ");
+
+    // Handle common HTML entities
+    cleanHtml = cleanHtml
+      .replace(/&nbsp;/gi, " ")
+      .replace(/&amp;/gi, "&")
+      .replace(/&lt;/gi, "<")
+      .replace(/&gt;/gi, ">")
+      .replace(/&quot;/gi, '"')
+      .replace(/&#39;/gi, "'")
+      .replace(/&[a-z]+;/gi, " "); // Replace any remaining entities
+
+    // Normalize whitespace and trim
+    cleanHtml = cleanHtml.replace(/\s+/g, " ").trim();
+
+    // If we didn't have plaintext or if our extracted text is more comprehensive, use it
+    if (!plaintext || cleanHtml.length > plaintext.length) {
+      plaintext = cleanHtml;
+    }
+  }
+
+  const transformed: Document = {
+    id: post.id,
+    title: post.title,
+    slug: post.slug,
+    url: post.url, //|| `${this.config.ghost.url}/${post.slug}/`,
+    html: post.html || "",
+    plaintext: plaintext,
+    excerpt: post.excerpt || "",
+    published_at: new Date(post.published_at || Date.now()).getTime(),
+    updated_at: new Date(post.updated_at || Date.now()).getTime(),
+  };
+
+  if (post.feature_image) {
+    transformed.feature_image = post.feature_image;
+  }
+
+  const tags = post.tags;
+  if (tags && Array.isArray(tags) && tags.length > 0) {
+    // Use dot notation for nested tag fields
+    transformed["tags.name"] = tags.map((tag: { name: string }) => tag.name);
+    transformed["tags.slug"] = tags.map((tag: { slug: string }) => tag.slug);
+
+    // Add the standard tags field that Typesense expects as string[]
+    transformed.tags = tags.map((tag: { name: string }) => tag.name);
+  }
+
+  const authors = post.authors;
+  if (authors && Array.isArray(authors) && authors.length > 0) {
+    transformed.authors = authors.map(
+      (author: { name: string }) => author.name,
+    );
+  }
+
+  // Add any additional fields specified in the config
+  // Only add fields that haven't already been transformed to avoid overriding custom transformations
+  // this.config.collection.fields.forEach((field) => {
+  //   const value = post[field.name as keyof GhostPost];
+  //   if (!(field.name in transformed) && value !== undefined && value !== null) {
+  //     transformed[field.name] = value;
+  //   }
+  // });
+
+  console.log("Transformed document:", transformed);
+  return transformed;
+}
