@@ -207,6 +207,15 @@ export class GhostService {
         null,
       );
 
+      // Update collection stats using direct DB update
+      await db
+        .update(collection)
+        .set({
+          postCount: posts.length,
+          pageCount: pages.length,
+        })
+        .where(eq(collection.id, collectionId));
+
       // Complete sync record
       await db
         .update(syncHistory)

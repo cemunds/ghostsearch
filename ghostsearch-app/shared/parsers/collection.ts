@@ -14,6 +14,7 @@ export const TypesenseCollection = z.object({
   syncError: z.string().nullable(),
   postCount: z.number(),
   pageCount: z.number(),
+  webhookSecret: z.string(),
 });
 
 export const CreateTypesenseCollection = TypesenseCollection.pick({
@@ -21,6 +22,7 @@ export const CreateTypesenseCollection = TypesenseCollection.pick({
   description: true,
   ghostUrl: true,
   ghostContentApiKey: true,
+  webhookSecret: true,
 });
 
 export const UpdateTypesenseCollection = TypesenseCollection.pick({

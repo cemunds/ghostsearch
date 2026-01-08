@@ -22,6 +22,7 @@ export const collectionRepository = {
         syncError: collection.syncError,
         postCount: collection.postCount,
         pageCount: collection.pageCount,
+        webhookSecret: collection.webhookSecret,
       })
       .from(collection)
       .where(eq(collection.userId, userId));
@@ -48,6 +49,7 @@ export const collectionRepository = {
         syncError: collection.syncError,
         postCount: collection.postCount,
         pageCount: collection.pageCount,
+        webhookSecret: collection.webhookSecret,
       })
       .from(collection)
       .where(
@@ -77,6 +79,7 @@ export const collectionRepository = {
         syncError: collection.syncError,
         postCount: collection.postCount,
         pageCount: collection.pageCount,
+        webhookSecret: collection.webhookSecret,
       })
       .from(collection)
       .where(
@@ -114,6 +117,7 @@ export const collectionRepository = {
         syncError: collection.syncError,
         postCount: collection.postCount,
         pageCount: collection.pageCount,
+        webhookSecret: collection.webhookSecret,
       });
 
     return createdCollection[0];
@@ -141,6 +145,7 @@ export const collectionRepository = {
         syncError: collection.syncError,
         postCount: collection.postCount,
         pageCount: collection.pageCount,
+        webhookSecret: collection.webhookSecret,
       });
 
     return updatedCollection[0];
@@ -166,6 +171,7 @@ export const collectionRepository = {
     syncStatus: string,
     syncError: string | null,
   ) => {
+    // TODO: Set lastSyncAt
     await db
       .update(collection)
       .set({ syncStatus, syncError })

@@ -6,6 +6,8 @@ import { collection as collectionTable } from "~~/server/db/schema";
 import { eq } from "drizzle-orm";
 import consola from "consola";
 import { z } from "zod";
+import { CreateTypesenseCollection } from "~~/shared/parsers/collection";
+import { randomBytes } from "crypto";
 
 const CreateCollectionDTO = z.object({
   name: z.string().min(1, "Name is required"),
@@ -49,11 +51,17 @@ export default defineEventHandler(async (event) => {
     consola.log("Validated Ghost Content API key");
   }
 
+  const webhookSecret = randomBytes(32).toString("hex");
+  const domainCollection = CreateTypesenseCollection.parse({
+    ...collection.data,
+    webhookSecret,
+  });
+
   try {
     consola.log("Creating collection");
     const createdCollection = await collectionService.create(
       db,
-      collection.data,
+      domainCollection,
       user.sub,
     );
     consola.log("Created collection");

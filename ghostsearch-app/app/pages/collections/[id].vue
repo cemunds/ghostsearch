@@ -84,6 +84,30 @@ async function syncCollection() {
   }
 }
 
+async function deleteCollection() {
+  try {
+    const response = await $fetch(`/api/v1/collections/${collectionId}`, {
+      method: "DELETE",
+    });
+
+    useToast().add({
+      title: "Collection deleted",
+      description: "Collection has been deleted.",
+      color: "success",
+    });
+
+    await navigateTo("/collections");
+  } catch (err) {
+    console.error("Failed to delete collection:", err);
+    useToast().add({
+      title: "Deletion failed",
+      description:
+        (err as any)?.statusMessage || "Failed to delete collection.",
+      color: "error",
+    });
+  }
+}
+
 // Copy script tag to clipboard
 function copyScriptTag() {
   if (!scriptTag.value) return;
@@ -232,6 +256,17 @@ onMounted(() => {
                     }}
                   </p>
                 </div>
+
+                <div>
+                  <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">
+                    Webhook URL
+                  </p>
+                  <p class="text-gray-900 dark:text-white">
+                    {{
+                      `https://ghostsearch.vercel.app/sync?collectionId=${collection?.id}&webhookSecret=${collection?.webhookSecret}`
+                    }}
+                  </p>
+                </div>
               </div>
             </UCard>
 
@@ -260,6 +295,24 @@ onMounted(() => {
                     {{ collection?.pageCount || 0 }}
                   </p>
                 </div>
+              </div>
+            </UCard>
+
+            <UCard>
+              <template #header>
+                <h3 class="font-medium text-gray-900 dark:text-white">
+                  Danger Zone
+                </h3>
+              </template>
+
+              <div class="space-y-4">
+                <UButton
+                  icon="i-lucide-trash"
+                  color="error"
+                  @click="deleteCollection"
+                >
+                  Delete Collection
+                </UButton>
               </div>
             </UCard>
           </div>
