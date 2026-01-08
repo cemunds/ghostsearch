@@ -3,16 +3,6 @@ import { collectionService } from "~~/server/services/collection";
 import { db } from "~~/server/db";
 import { GhostService, transformPost } from "~~/server/services/ghost";
 
-// Validate environment variables
-const EnvSchema = z.object({
-  GHOST_URL: z.url(),
-  GHOST_CONTENT_API_KEY: z.string().min(1),
-  TYPESENSE_HOST: z.string().min(1),
-  TYPESENSE_API_KEY: z.string().min(1),
-  COLLECTION_NAME: z.string().min(1).default("posts"),
-  WEBHOOK_SECRET: z.string().min(1),
-});
-
 // Ghost webhook payload schema
 const WebhookSchema = z.object({
   post: z.object({
@@ -66,10 +56,6 @@ export default defineEventHandler(async (event) => {
     // Log request info
     console.log("\n🔔 Incoming webhook request");
     console.log("📝 Method:", event.method);
-
-    // Validate environment variables
-    const env = EnvSchema.parse(process.env);
-    console.log("✅ Environment loaded successfully");
 
     const { secret, collectionId } = getQuery<QueryParams>(event);
 
