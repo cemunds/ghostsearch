@@ -47,7 +47,7 @@ export default defineEventHandler(async (event) => {
     await collectionService.setSyncStatus(db, collectionId, "syncing", null);
 
     // Create Ghost service and start sync
-    const ghostService = new GhostService({
+    const ghostService = await GhostService.create({
       siteUrl: collection.ghostSiteUrl,
       adminUrl: collection.ghostAdminUrl,
       adminApiKey: collection.ghostAdminApiKey,

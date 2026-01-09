@@ -5,7 +5,7 @@ it("should verify a valid Ghost JWT", async () => {
   const jwt =
     "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCIsImtpZCI6ImFkRU03alpoRWNwaFNDMWx5aVIwVDJSODUzM0JZcHctc2x0eEVSeWRlQ3MifQ.eyJzdWIiOiJjaHJpc3RvcGguZW11bmRzQGdtYWlsLmNvbSIsImtpZCI6ImFkRU03alpoRWNwaFNDMWx5aVIwVDJSODUzM0JZcHctc2x0eEVSeWRlQ3MiLCJpYXQiOjE3Njc5Njk0MjYsImV4cCI6MTc2Nzk3MDAyNiwiYXVkIjoiaHR0cHM6Ly9iaW1mbG93LmFwcC9tZW1iZXJzL2FwaSIsImlzcyI6Imh0dHBzOi8vYmltZmxvdy5hcHAvbWVtYmVycy9hcGkifQ.e4IvIWbHBHKjgqqiDREQvIq73a_tWQcOrIm7fMgmYsyu--XbAPkG4AHlQFs8eXFtXXh0pU9HYSVnbqmLVl0arl9PNUjM1ARNIvfxWWv1jzylqRBsrJ7_suBmz8jBNn7JkGwC46nEAzN9Q6sOd3-Z2KJjKwJw4WBefYop2SofQ7g";
 
-  const ghostService = new GhostService({
+  const ghostService = await GhostService.create({
     siteUrl: "https://bimflow.app",
     adminUrl: "https://admin.bimflow.app",
     adminApiKey:
@@ -18,8 +18,8 @@ it("should verify a valid Ghost JWT", async () => {
   expect(member.email).toBe("christoph.emunds@gmail.com");
 });
 
-it("should be able to fetch all posts", async () => {
-  const ghostService = new GhostService({
+it("should only fetch published posts", async () => {
+  const ghostService = await GhostService.create({
     siteUrl: "https://bimflow.app",
     adminUrl: "https://admin.bimflow.app",
     adminApiKey:
@@ -30,10 +30,11 @@ it("should be able to fetch all posts", async () => {
   // console.log(posts)
 
   expect(posts.length).toBeGreaterThan(0);
+  expect(posts.filter((p) => p.status !== "published")).toHaveLength(0)
 });
 
-it("should be able to fetch all pages", async () => {
-  const ghostService = new GhostService({
+it("should only fetch published pages", async () => {
+  const ghostService = await GhostService.create({
     siteUrl: "https://bimflow.app",
     adminUrl: "https://admin.bimflow.app",
     adminApiKey:
@@ -44,10 +45,11 @@ it("should be able to fetch all pages", async () => {
   // console.log(pages)
 
   expect(pages.length).toBeGreaterThan(0);
+  expect(pages.filter((p) => p.status !== "published")).toHaveLength(0)
 });
 
 it("should fetch a post by id", async () => {
-  const ghostService = new GhostService({
+  const ghostService = await GhostService.create({
     siteUrl: "https://bimflow.app",
     adminUrl: "https://admin.bimflow.app",
     adminApiKey:
@@ -60,7 +62,7 @@ it("should fetch a post by id", async () => {
 });
 
 it("should fetch a page by id", async () => {
-  const ghostService = new GhostService({
+  const ghostService = await GhostService.create({
     siteUrl: "https://bimflow.app",
     adminUrl: "https://admin.bimflow.app",
     adminApiKey:
@@ -73,7 +75,7 @@ it("should fetch a page by id", async () => {
 });
 
 it("should fetch a member by id", async () => {
-  const ghostService = new GhostService({
+  const ghostService = await GhostService.create({
     siteUrl: "https://bimflow.app",
     adminUrl: "https://admin.bimflow.app",
     adminApiKey:

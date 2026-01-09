@@ -46,9 +46,8 @@ const WebhookSchema = z.object({
   }),
 });
 
-// TODO: Unify naming of 'secret' and 'webhookSecret'
 interface QueryParams {
-  secret: string;
+  webhookSecret: string;
   collectionId: string;
 }
 
@@ -58,10 +57,10 @@ export default defineEventHandler(async (event) => {
     console.log("\n🔔 Incoming webhook request");
     console.log("📝 Method:", event.method);
 
-    const { secret, collectionId } = getQuery<QueryParams>(event);
+    const { webhookSecret, collectionId } = getQuery<QueryParams>(event);
 
     // Validate webhook secret
-    if (!secret) {
+    if (!webhookSecret) {
       console.log("❌ No secret provided in request");
       return {
         statusCode: 401,
@@ -69,9 +68,9 @@ export default defineEventHandler(async (event) => {
       };
     }
 
-    const collection = await collectionService.getWithSecret(
+    const collection = await collectionService.getWithWebhookSecret(
       db,
-      secret,
+      webhookSecret,
       collectionId,
     );
 
@@ -97,9 +96,10 @@ export default defineEventHandler(async (event) => {
 
     // Initialize manager
     // const manager = new GhostTypesenseManager(config);
-    const ghostService = new GhostService({
+    const ghostService = await GhostService.create({
       siteUrl: collection.ghostSiteUrl,
-      contentApiKey: collection.ghostContentApiKey,
+      adminUrl: collection.ghostAdminUrl,
+      adminApiKey: collection.ghostAdminApiKey
     });
     console.log("🔄 Typesense manager initialized");
 
@@ -131,9 +131,10 @@ export default defineEventHandler(async (event) => {
 
       if (status === "published" && visibility === "public") {
         console.log("📝 Indexing published post");
-        const ghostService = new GhostService({
+        const ghostService = await GhostService.create({
           siteUrl: collection.ghostSiteUrl,
-          contentApiKey: collection.ghostContentApiKey,
+          adminUrl: collection.ghostAdminUrl,
+          adminApiKey: collection.ghostAdminApiKey
         });
 
         const newPost = await ghostService.fetchPost(post.current.id);

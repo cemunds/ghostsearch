@@ -35,7 +35,7 @@ export default defineEventHandler(async (event) => {
 
   // Validate Ghost CMS configuration if provided
   if (collection.data.ghostSiteUrl && collection.data.ghostAdminApiKey) {
-    const ghostService = new GhostService({
+    const ghostService = await GhostService.create({
       siteUrl: collection.data.ghostSiteUrl,
       adminUrl: collection.data.ghostAdminUrl,
       adminApiKey: collection.data.ghostAdminApiKey,

@@ -19,15 +19,25 @@ export class GhostService {
   private config: GhostServiceConfig;
   private ghostClient: ReturnType<typeof GhostAdminAPI>;
 
-  constructor(config: GhostServiceConfig) {
-    this.config = config;
-    const GhostAdminAPINew = require("@tryghost/admin-api");
+  private constructor() {
+    // @ts-expect-error
+    this.config = null
+    // @ts-expect-error
+    this.ghostClient = null
+  }
 
-    this.ghostClient = new GhostAdminAPINew({
+  static async create(config: GhostServiceConfig) {
+    const ghostService = new GhostService()
+    ghostService.config = config;
+    const GhostAdminAPINew = (await import("@tryghost/admin-api")).default;
+
+    ghostService.ghostClient = new GhostAdminAPINew({
       url: config.adminUrl,
       key: config.adminApiKey,
       version: "v6.0" as const,
     });
+
+    return ghostService
   }
 
   /**
@@ -57,6 +67,7 @@ export class GhostService {
         const response = await this.ghostClient.posts.browse({
           limit: 15,
           page,
+          filter: ["status:published"],
           include: ["tags", "authors"],
         });
 
@@ -101,6 +112,7 @@ export class GhostService {
         const response = await this.ghostClient.pages.browse({
           limit: 15,
           page,
+          filter: ["status:published"],
           include: ["tags", "authors"],
         });
 

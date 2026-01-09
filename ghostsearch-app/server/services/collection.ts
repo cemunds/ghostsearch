@@ -84,8 +84,8 @@ export const collectionService = {
   ): Promise<TypesenseCollection | null> => {
     return await collectionRepository.getById(db, userId, collectionId);
   },
-  getWithSecret: async (db: DB, secret: string, collectionId: string) => {
-    return await collectionRepository.getWithSecret(db, secret, collectionId);
+  getWithWebhookSecret: async (db: DB, webhookSecret: string, collectionId: string) => {
+    return await collectionRepository.getWithWebhookSecret(db, webhookSecret, collectionId);
   },
   create: async (
     db: DB,

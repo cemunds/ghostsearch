@@ -144,25 +144,13 @@ onMounted(() => {
 <template>
   <UDashboardPanel>
     <template #header>
-      <UDashboardNavbar
-        :title="collection?.name || 'Collection Details'"
-        :ui="{ right: 'gap-3' }"
-      >
+      <UDashboardNavbar :title="collection?.name || 'Collection Details'" :ui="{ right: 'gap-3' }">
         <template #leading>
           <UDashboardSidebarCollapse />
-          <UButton
-            icon="i-lucide-arrow-left"
-            variant="ghost"
-            color="neutral"
-            @click="goBack"
-          />
+          <UButton icon="i-lucide-arrow-left" variant="ghost" color="neutral" @click="goBack" />
         </template>
         <template #right>
-          <UButton
-            icon="i-lucide-refresh-cw"
-            @click="syncCollection"
-            :loading="syncStatus?.status === 'syncing'"
-          >
+          <UButton icon="i-lucide-refresh-cw" @click="syncCollection" :loading="syncStatus?.status === 'syncing'">
             {{ syncStatus?.status === "syncing" ? "Syncing..." : "Sync Now" }}
           </UButton>
         </template>
@@ -178,14 +166,8 @@ onMounted(() => {
     <template #body>
       <div class="space-y-6">
         <!-- Error Message -->
-        <UAlert
-          v-if="error"
-          icon="i-lucide-alert-circle"
-          color="error"
-          variant="soft"
-          :description="error"
-          @close="error = null"
-        />
+        <UAlert v-if="error" icon="i-lucide-alert-circle" color="error" variant="soft" :description="error"
+          @close="error = null" />
 
         <!-- Loading State -->
         <div v-if="isLoading" class="flex justify-center items-center py-12">
@@ -306,11 +288,7 @@ onMounted(() => {
               </template>
 
               <div class="space-y-4">
-                <UButton
-                  icon="i-lucide-trash"
-                  color="error"
-                  @click="deleteCollection"
-                >
+                <UButton icon="i-lucide-trash" color="error" @click="deleteCollection">
                   Delete Collection
                 </UButton>
               </div>
@@ -332,22 +310,11 @@ onMounted(() => {
                     Current Status
                   </p>
                   <div class="flex items-center gap-2">
-                    <UBadge
-                      v-if="syncStatus?.status === 'syncing'"
-                      variant="soft"
-                      color="info"
-                    >
-                      <UIcon
-                        name="i-lucide-loader-2"
-                        class="animate-spin mr-1"
-                      />
+                    <UBadge v-if="syncStatus?.status === 'syncing'" variant="soft" color="info">
+                      <UIcon name="i-lucide-loader-2" class="animate-spin mr-1" />
                       Syncing
                     </UBadge>
-                    <UBadge
-                      v-else-if="syncStatus?.status === 'error'"
-                      variant="soft"
-                      color="error"
-                    >
+                    <UBadge v-else-if="syncStatus?.status === 'error'" variant="soft" color="error">
                       <UIcon name="i-lucide-alert-circle" class="mr-1" />
                       Error
                     </UBadge>
@@ -362,12 +329,7 @@ onMounted(() => {
                   <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">
                     Error Message
                   </p>
-                  <UAlert
-                    icon="i-lucide-alert-circle"
-                    color="error"
-                    variant="soft"
-                    :description="syncStatus.error"
-                  />
+                  <UAlert icon="i-lucide-alert-circle" color="error" variant="soft" :description="syncStatus.error" />
                 </div>
 
                 <div v-if="syncStatus?.lastSyncAt">
@@ -416,25 +378,15 @@ onMounted(() => {
                   <h3 class="font-medium text-gray-900 dark:text-white">
                     Search Integration
                   </h3>
-                  <UButton
-                    icon="i-lucide-copy"
-                    size="xs"
-                    variant="ghost"
-                    @click="copyScriptTag"
-                  >
+                  <UButton icon="i-lucide-copy" size="xs" variant="ghost" @click="copyScriptTag">
                     Copy Script
                   </UButton>
                 </div>
               </template>
 
               <div class="space-y-4">
-                <UTextarea
-                  v-model="scriptTag"
-                  :rows="10"
-                  readonly
-                  placeholder="Generating script tag..."
-                  class="font-mono text-xs"
-                />
+                <UTextarea v-model="scriptTag" :rows="10" readonly placeholder="Generating script tag..."
+                  class="font-mono text-xs" />
 
                 <UAlert icon="i-lucide-info" color="info" variant="soft">
                   <template #description>

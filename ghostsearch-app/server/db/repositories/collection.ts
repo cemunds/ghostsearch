@@ -61,9 +61,9 @@ export const collectionRepository = {
 
     return userCollection.at(0) ?? null;
   },
-  getWithSecret: async (
+  getWithWebhookSecret: async (
     db: Queryable,
-    secret: string,
+    webhookSecret: string,
     collectionId: string,
   ): Promise<TypesenseCollection | null> => {
     const userCollection = await db
@@ -87,7 +87,7 @@ export const collectionRepository = {
       .from(collection)
       .where(
         and(
-          eq(collection.webhookSecret, secret),
+          eq(collection.webhookSecret, webhookSecret),
           eq(collection.id, collectionId),
         ),
       )
